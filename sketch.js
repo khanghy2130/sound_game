@@ -4,6 +4,20 @@
   -Hover on the gem and press Z to switch color.
   -Or press X to play clue sounds.
   -Clue sounds tell which surrounding gems group, and how many blue gems should be in that group.
+  
+  Numeric:
+    Cat: 1
+    Dog: 2
+    Frog: 3
+    Monkey: 4
+
+  Group:
+    Adjacent: bell
+    Diagonal: siren
+    Left: bees
+    Right: birds
+    Top: night ambience
+    Down: wave
     
   -Assets:
     sounds: https://freesound.org
@@ -14,7 +28,6 @@
   -Codes:
     flat(): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat
     every(): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every
-    reduce(): https://www.tutorialrepublic.com/faq/how-to-find-the-sum-of-an-array-of-numbers-in-javascript.php
     for...in: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in
     desctructuring: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
     arrow function: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions
@@ -22,8 +35,9 @@
 
 
 // CONSTANTS
-const MIN_BLUE_GEMS = 1;
-const MAX_BLUE_GEMS = 4;
+const CHEAT = !true;
+const MIN_BLUE_GEMS = 1; // minimum amount of surrounding blue gems
+const MAX_BLUE_GEMS = 4; // maximum amount of surrounding blue gems
 const BOARD_SIZE = 5; // number of cells in a row
 const CANVAS_SIZE = 400;
 const CELL_SIZE = CANVAS_SIZE / BOARD_SIZE;
@@ -44,22 +58,6 @@ const _LEFT = [-1, 0],
   _BOTTOM_LEFT = [-1, 1],
   _BOTTOM_RIGHT = [1, 1];
 
-// for amounts of 1 to 4, each amount has a list of combinations of numeric names (as numbers) ... the absolute value of their sum is equal to the corresponding amount
-const AMOUNTS_COMBINATIONS = [
-  [
-    [1], [-1], [2, -1], [-1, 2], [1, -2], [-2, 1]
-  ], // is 1
-  [
-    [1, 1], [-1, -1], [2], [-2]
-  ], // is 2
-  [
-    [1, 2], [2, 1], [-1, -2], [-2, -1]
-  ], // is 3
-  [
-    [2, 2], [-2, -2]
-  ] // is 4
-];
-
 // GAME CONTROL VARIABLES
 let isGenerating = false;
 let gameWon = false;
@@ -72,7 +70,7 @@ let gemsData = []; // array of rows
 /* 
 a gem object has:
     groupName  >>  string of the group's name
-    numericNames  >>  array of numeric names
+    numericValue  >>  number of blue gems in that group
     isBlue  >>  boolean for gameplay, by default is false (red gem)
     isSatisfied  >>  boolean for gameplay
     sizeFactor  >>  number that affects the gem size for gameplay
@@ -85,7 +83,7 @@ let bgImage,
     checkmarkImage, successImage;
 let successSound; // played when win
 
-// groupSounds & numericSounds are dictionaries of "key": {fileName, volume, loadedSound}
+// dictionaries of "key": {fileName, volume, loadedSound}
 const groupSounds = {
   "adjacent": {
     fileName: "bell.mp3",
@@ -118,29 +116,28 @@ const groupSounds = {
     loadedSound: null
   }
 };
-const numericSounds = {
-  // these numeric names are strings, but can be converted into number
-  "-1": {
+const numericSounds = [
+  {
     fileName: "cat.wav",
     volume: 1,
     loadedSound: null
   },
-  "-2": {
+  {
     fileName: "dog.wav",
     volume: 1,
     loadedSound: null
   },
-  "1": {
+  {
     fileName: "frog.ogg",
     volume: 0.5,
     loadedSound: null
   },
-  "2": {
+  {
     fileName: "monkey.ogg",
     volume: 0.1,
     loadedSound: null
   }
-};
+];
 
 
 // CUSTOM FUNCTIONS (createNewGame, changeGemSize, renderAndUpdateGem, switchGem, playClueSound)
@@ -169,9 +166,8 @@ function createNewGame() {
       let newRow = [];
       // loop x: adding booleans to newRow
       for (let x = 0; x < BOARD_SIZE; x++) {
-        // adds a boolean that has 45% chance to be true
-        // slightly under 50% so it's more likely less blue gems
-        newRow.push(random() < 0.45);
+        // adds a boolean that has 50% chance to be true
+        newRow.push(random() < 0.5);
       }
       solutionData.push(newRow);
     }
@@ -213,14 +209,12 @@ function createNewGame() {
         if (blueGemsAmount < 1) pickedGroupName = null;
       }
 
-      // STEP 3.4: pick a random combination of numberic names for the amount of blue gems
-      // index is blueGemsAmount - 1 because the array starts at index 0
-      const combinations = AMOUNTS_COMBINATIONS[blueGemsAmount - 1];
-      const numericNames = random(combinations);
+      // STEP 3.4: return this new gem object
       return {
         groupName: pickedGroupName,
-        numericNames: numericNames,
-        isBlue: false,
+        numericValue: blueGemsAmount,
+        // show solution if CHEAT is true
+        isBlue: CHEAT ? isBlue : false,
         isSatisfied: false,
         sizeFactor: GEM_SIZE_FACTOR.SPAWN
       };
@@ -298,11 +292,8 @@ function switchGem(hoveredGemObject) {
       // STEP 3.2: evaluate the 2 rules
       // first rule is "all" should has MIN_BLUE_GEMS to MAX_BLUE_GEMS gems only
       const rule1 = allBlueGemsAmount >= MIN_BLUE_GEMS && allBlueGemsAmount <= MAX_BLUE_GEMS;
-      // second rule is the amount from target group name must be equal to the absolute value of the sum of the numeric names (which are numbers)
-      const numericNamesSum = gemObject.numericNames.reduce(function(a, b) {
-        return a + b;
-      }, 0);
-      const rule2 = abs(numericNamesSum) === targetBlueGemsAmount;
+      // second rule is to have equal amount of blue gems in the target group
+      const rule2 = gemObject.numericValue === targetBlueGemsAmount;
 
       // STEP 3.3: check if both rules are true then this gem is satisfied
       gemObject.isSatisfied = rule1 && rule2;
@@ -325,15 +316,13 @@ function playClueSound(hoveredGemObject){
   // STEP 1: play a sound from group name
   groupSounds[hoveredGemObject.groupName].loadedSound.play();
   
-  // STEP 2: set timeouts to play the sounds from numeric names
-  hoveredGemObject.numericNames.forEach((numericName, index) => {
-    // converts numbericName from number to string
-    const stringifiedName = numericName.toString();
-    // plays the sound after a delay (0.3sec + index * 1sec)
-    setTimeout(() => {
-      numericSounds[stringifiedName].loadedSound.play();
-    }, 300 + index * 1000);
-  });
+  // STEP 2: play a sound from numeric value
+  // minus 1 because array starts at index 0
+  const soundIndex = hoveredGemObject.numericValue - 1;
+  // play sound but with 1 second delay
+  setTimeout(() => {
+    numericSounds[soundIndex].loadedSound.play();
+  }, 1000);
 }
 
 
@@ -390,7 +379,6 @@ function getBlueGemsAmount(position, groupName, checkSolution) {
 
   return blueGemsCount;
 }
-
 
 
 
