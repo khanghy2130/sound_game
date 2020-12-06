@@ -1,8 +1,8 @@
 /*
   -Figure out which gems are red and which are blue.
   -All gems are red by default, each must have a certain amount of blue gems surrounding and an unique rule depending on clue sounds.
-  -Hover on the gem and press SPACE to toggle color.
-  -Or mouse-click the gem to play clue sounds.
+  -Hover on the gem and press Z to switch color.
+  -Or press X to play clue sounds.
   -Clue sounds tell which surrounding gems group, and how many blue gems should be in that group.
     
   -Assets:
@@ -20,7 +20,6 @@
     arrow function: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions
 */
 
-const log = console.log; // short alias
 
 // CONSTANTS
 const MIN_BLUE_GEMS = 1;
@@ -65,6 +64,7 @@ const AMOUNTS_COMBINATIONS = [
 let isGenerating = false;
 let gameWon = false;
 let successImageYFactor = 0;
+let hoveredPosition = null; // position [x,y] of the hovered gem, if is null then no gem is hovered. this is used when pressing Z to switch gem
 let solutionData = []; // array of rows
 // a row in solutionData is an array of booleans (true means this position is blue gem, false means this position is red gem)
 let gemsData = []; // array of rows
@@ -77,7 +77,6 @@ a gem object has:
     isSatisfied  >>  boolean for gameplay
     sizeFactor  >>  number that affects the gem size for gameplay
 */
-let hoveredPosition = null; // position [x,y] of the hovered gem, if is null then no gem is hovered. this is used when pressing Z to switch gem
 
 
 // ASSET VARIABLES (images, sounds)
@@ -89,33 +88,33 @@ let successSound; // played when win
 // groupSounds & numericSounds are dictionaries of "key": {fileName, volume, loadedSound}
 const groupSounds = {
   "adjacent": {
-    fileName: "",
-    volume: 1,
+    fileName: "bell.mp3",
+    volume: 0.3,
     loadedSound: null
   },
   "diagonal": {
-    fileName: "",
-    volume: 1,
+    fileName: "siren.mp3",
+    volume: 0.2,
     loadedSound: null
   },
   "left": {
-    fileName: "",
-    volume: 1,
+    fileName: "bees.mp3",
+    volume: 0.3,
     loadedSound: null
   },
   "right": {
-    fileName: "",
-    volume: 1,
+    fileName: "birds.mp3",
+    volume: 0.4,
     loadedSound: null
   },
   "top": {
-    fileName: "",
-    volume: 1,
+    fileName: "night.mp3",
+    volume: 0.7,
     loadedSound: null
   },
   "bottom": {
-    fileName: "",
-    volume: 1,
+    fileName: "wave.mp3",
+    volume: 0.2,
     loadedSound: null
   }
 };
@@ -133,12 +132,12 @@ const numericSounds = {
   },
   "1": {
     fileName: "frog.ogg",
-    volume: 1,
+    volume: 0.5,
     loadedSound: null
   },
   "2": {
-    fileName: "bird.wav",
-    volume: 0.2,
+    fileName: "monkey.ogg",
+    volume: 0.1,
     loadedSound: null
   }
 };
@@ -155,6 +154,7 @@ function createNewGame() {
   isGenerating = true;
   gameWon = false;
   successImageYFactor = 0;
+  hoveredPosition = null;
   solutionData = [];
   gemsData = [];
 
@@ -323,18 +323,17 @@ function switchGem(hoveredGemObject) {
 // called when X is pressed
 function playClueSound(hoveredGemObject){
   // STEP 1: play a sound from group name
-  //successSound.play();
+  groupSounds[hoveredGemObject.groupName].loadedSound.play();
   
   // STEP 2: set timeouts to play the sounds from numeric names
   hoveredGemObject.numericNames.forEach((numericName, index) => {
     // converts numbericName from number to string
     const stringifiedName = numericName.toString();
-    // plays the sound after a delay (0.2sec + index * 0.7sec)
+    // plays the sound after a delay (0.3sec + index * 1sec)
     setTimeout(() => {
       numericSounds[stringifiedName].loadedSound.play();
-    }, 200 + index * 700);
+    }, 300 + index * 1000);
   });
-  
 }
 
 
@@ -420,9 +419,17 @@ function preload() {
       }
     );
   }
-  
+
   // looping through values of groupSounds
-  ////////////////
+  for (const key in groupSounds) {
+    const valueObject = groupSounds[key];
+    valueObject.loadedSound = loadSound(
+      "group_sounds/" + valueObject.fileName, 
+      () => {
+        valueObject.loadedSound.setVolume(valueObject.volume);
+      }
+    );
+  }
 }
 
 function setup() {
@@ -431,7 +438,7 @@ function setup() {
   canvasObj.parent("canvas-container");
 
   // grab New Game button to assign onclick callback
-  select("button").elt.onclick = createNewGame;
+  select("#new-game-button").elt.onclick = createNewGame;
 
   // program settings
   frameRate(30);
