@@ -24,13 +24,6 @@
     gem images: https://opengameart.org/content/gem-jewel-diamond-glass
     checkmark image: https://commons.wikimedia.org/wiki/File:Check_green_circle.svg
     success image: https://pixabay.com/vectors/cup-icons-medal-win-game-2533629
-    
-  -Codes:
-    flat(): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat
-    every(): https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/every
-    for...in: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in
-    desctructuring: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
-    arrow function: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions
 */
 
 
